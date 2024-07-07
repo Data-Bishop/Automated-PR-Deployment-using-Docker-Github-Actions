@@ -1,0 +1,38 @@
+# Python cache files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv
+.venv
+env
+
+# Environment variables file
+.env
+
+# Development and IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+
+# Git
+.git
+.gitignore
+
+# Any other build or temporary directories
+build/
+dist/
+*.egg-info/
