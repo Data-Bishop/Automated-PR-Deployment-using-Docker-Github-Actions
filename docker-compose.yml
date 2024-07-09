@@ -28,6 +28,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`localhost`)"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.frontend-stripprefix.stripprefix.prefixes=/login"
+      - "traefik.http.routers.frontend.middlewares=frontend-stripprefix@docker"
 
   backend:
     build: ./backend
