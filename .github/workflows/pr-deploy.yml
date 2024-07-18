@@ -40,11 +40,11 @@ jobs:
         id: ec2
         run: |
           INSTANCE_ID=$(aws ec2 run-instances \
-            --image-id ami-xxxxxxxx \
-            --instance-type t2.micro \
-            --key-name my-key-pair \
-            --security-group-ids sg-xxxxxxxx \
-            --subnet-id subnet-xxxxxxxx \
+            --image-id ami-0249211c9916306f8 \
+            --instance-type t3.micro \
+            --key-name "Resume Webpage HNG" \
+            --security-group-ids sg-0e0cef3f96abd921f \
+            --subnet-id subnet-0ff989b377310fbf0 \
             --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=PR-${{ github.event.pull_request.number }}}]' \
             --query 'Instances[0].InstanceId' \
             --output text)
@@ -80,7 +80,7 @@ jobs:
       - name: Comment PR
         uses: actions/github-script@v6
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{secrets.PAT}}
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
