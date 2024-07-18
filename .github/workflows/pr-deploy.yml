@@ -1,0 +1,95 @@
+name: PR Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+env:
+  AWS_REGION: eu-north-1 # Change this to your preferred region
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Set PR_NUMBER
+        run: echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker images
+        run: |
+          docker-compose build
+          docker-compose push
+
+      - name: Launch EC2 instance
+        id: ec2
+        run: |
+          INSTANCE_ID=$(aws ec2 run-instances \
+            --image-id ami-xxxxxxxx \
+            --instance-type t2.micro \
+            --key-name my-key-pair \
+            --security-group-ids sg-xxxxxxxx \
+            --subnet-id subnet-xxxxxxxx \
+            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=PR-${{ github.event.pull_request.number }}}]' \
+            --query 'Instances[0].InstanceId' \
+            --output text)
+          echo "::set-output name=instance_id::$INSTANCE_ID"
+          
+          # Wait for instance to be running
+          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+          
+          # Get public IP
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --instance-ids $INSTANCE_ID \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)
+          echo "::set-output name=public_ip::$PUBLIC_IP"
+
+      - name: Deploy to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          PUBLIC_IP: ${{ steps.ec2.outputs.public_ip }}
+        run: |
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          scp -o StrictHostKeyChecking=no -i private_key docker-compose.yml ec2-user@${PUBLIC_IP}:~/
+          ssh -o StrictHostKeyChecking=no -i private_key ec2-user@${PUBLIC_IP} '
+            sudo yum update -y
+            sudo yum install -y docker
+            sudo service docker start
+            sudo usermod -a -G docker ec2-user
+            sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            PR_NUMBER=${{ env.PR_NUMBER }} docker-compose up -d
+          '
+
+      - name: Comment PR
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Deployment successful! Access your app at: http://${{ steps.ec2.outputs.public_ip }}'
+            })
+
+      - name: Clean up on PR close
+        if: github.event.action == 'closed'
+        run: |
+          aws ec2 terminate-instances --instance-ids ${{ steps.ec2.outputs.instance_id }}

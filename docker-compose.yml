@@ -20,25 +20,27 @@ services:
 
   frontend:
     build: ./frontend
+    image: your-dockerhub-username/frontend:${PR_NUMBER:-latest}
     env_file:
       - ./frontend/.env
     environment:
       - VITE_API_URL=http://localhost
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
-      - "traefik.http.middlewares.frontend-stripprefix.stripprefix.prefixes=/login"
-      - "traefik.http.routers.frontend.middlewares=frontend-stripprefix@docker"
+      - "traefik.http.routers.frontend-${PR_NUMBER:-main}.rule=Host(`localhost`)"
+      - "traefik.http.services.frontend-${PR_NUMBER:-main}.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.frontend-stripprefix-${PR_NUMBER:-main}.stripprefix.prefixes=/login"
+      - "traefik.http.routers.frontend-${PR_NUMBER:-main}.middlewares=frontend-stripprefix-${PR_NUMBER:-main}@docker"
 
   backend:
     build: ./backend
+    image: your-dockerhub-username/backend:${PR_NUMBER:-latest}
     env_file:
       - ./backend/.env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`localhost`) && PathPrefix(`/api`, `/docs`, `/redoc`)"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.backend-${PR_NUMBER:-main}.rule=Host(`localhost`) && PathPrefix(`/api`, `/docs`, `/redoc`)"
+      - "traefik.http.services.backend-${PR_NUMBER:-main}.loadbalancer.server.port=8000"
 
   postgres:
     image: postgres:13
@@ -57,8 +59,8 @@ services:
       - ADMINER_DEFAULT_SERVER=postgres
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.adminer.rule=Host(`db.localhost`)"
-      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+      - "traefik.http.routers.adminer-${PR_NUMBER:-main}.rule=Host(`db.localhost`)"
+      - "traefik.http.services.adminer-${PR_NUMBER:-main}.loadbalancer.server.port=8080"
 
 volumes:
   postgres_data:
