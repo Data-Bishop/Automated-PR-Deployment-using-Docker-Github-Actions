@@ -20,7 +20,7 @@ services:
 
   frontend:
     build: ./frontend
-    image: your-dockerhub-username/frontend:${PR_NUMBER:-latest}
+    image: databishop/frontend:${PR_NUMBER:-latest}
     env_file:
       - ./frontend/.env
     environment:
@@ -34,7 +34,7 @@ services:
 
   backend:
     build: ./backend
-    image: your-dockerhub-username/backend:${PR_NUMBER:-latest}
+    image: databishop/backend:${PR_NUMBER:-latest}
     env_file:
       - ./backend/.env
     labels:
