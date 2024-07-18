@@ -66,8 +66,8 @@ jobs:
           PUBLIC_IP: ${{ steps.ec2.outputs.public_ip }}
         run: |
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
-          scp -o StrictHostKeyChecking=no -i private_key docker-compose.yml ec2-user@${PUBLIC_IP}:~/
-          ssh -o StrictHostKeyChecking=no -i private_key ec2-user@${PUBLIC_IP} '
+          scp -o StrictHostKeyChecking=no -i private_key docker-compose.yml ubuntu@${PUBLIC_IP}:~/
+          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${PUBLIC_IP} '
             sudo apt-get update
             sudo apt-get -y install ca-certificates curl
             sudo install -m 0755 -d /etc/apt/keyrings
